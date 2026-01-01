@@ -1,0 +1,86 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 20px;
+}
+
+#info {
+    margin-bottom: 10px;
+}
+
+#game {
+    display: grid;
+    grid-gap: 1px;
+    background: #888;
+    justify-content: center;
+}
+
+.cell {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    background: #ccc;
+    user-select: none;
+    border-top: 2px solid #fff;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #888;
+    border-right: 2px solid #888;
+}
+
+.cell.revealed {
+    background: #e0e0e0;
+    border-top: 2px solid #888;
+    border-left: 2px solid #888;
+    border-bottom: 2px solid #fff;
+    border-right: 2px solid #fff;
+    cursor: default;
+}
+
+.cell.flagged {
+    color: red;
+}
+
+.cell.question {
+    color: blue;
+}
+
+button {
+    margin: 5px;
+    padding: 5px 10px;
+}
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-box {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #000;
+    text-align: center;
+    min-width: 200px;
+}
+
+.dialog-title {
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.dialog-message {
+    margin-bottom: 15px;
+    font-size: 16px;
+}
