@@ -43,6 +43,26 @@
     <button onclick="backToMenu()">Back to Menu</button>
 </div>
 
+<!-- 🔽 Firebase SDK（compat版） -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- 🔽 Firebase 初期化 -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDinQVl3I1EKGfi9HtDxjA1xyY4XqE_pDA",
+    authDomain: "minesweeper-ranking.firebaseapp.com",
+    projectId: "minesweeper-ranking",
+    storageBucket: "minesweeper-ranking.firebasestorage.app",
+    messagingSenderId: "418209334034",
+    appId: "1:418209334034:web:ff2e4358820f63480469cb"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+<!-- 🔽 最後に script.js -->
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </body>

@@ -1,16 +1,25 @@
 # app.py
 from flask import Flask, render_template, jsonify, request, session
 import random
+import uuid
+import os
 
 app = Flask(__name__)
 app.secret_key = "minesweeper-secret-key"
 
+# -------------------------
 # 難易度設定
+# -------------------------
 DIFFICULTIES = {
     "Easy": (9, 9, 10),
     "Normal": (16, 16, 40),
     "Hard": (16, 30, 99)
 }
+
+# -------------------------
+# ゲーム保存領域（session_id -> game）
+# -------------------------
+games = {}
 
 # -------------------------
 # ゲームクラス
@@ -51,7 +60,8 @@ class MinesweeperGame:
                 if self.board_state[r][c]["value"] == -1:
                     continue
                 self.board_state[r][c]["value"] = sum(
-                    (0 <= r + dr < self.rows and 0 <= c + dc < self.cols and
+                    (0 <= r + dr < self.rows and
+                     0 <= c + dc < self.cols and
                      self.board_state[r + dr][c + dc]["value"] == -1)
                     for dr in (-1, 0, 1)
                     for dc in (-1, 0, 1)
@@ -70,7 +80,9 @@ class MinesweeperGame:
 
         if cell["value"] == -1:
             self.game_over_flag = True
-        elif cell["value"] == 0:
+            return
+
+        if cell["value"] == 0:
             for dr in (-1, 0, 1):
                 for dc in (-1, 0, 1):
                     nr, nc = r + dr, c + dc
@@ -85,16 +97,25 @@ class MinesweeperGame:
         cell["flag"] = not cell["flag"]
         self.remaining_mines += -1 if cell["flag"] else 1
 
+    def is_cleared(self):
+        for r in range(self.rows):
+            for c in range(self.cols):
+                cell = self.board_state[r][c]
+                if cell["value"] != -1 and not cell["revealed"]:
+                    return False
+        return True
+
 
 # -------------------------
-# session から game を取得
+# game 取得（session -> games）
 # -------------------------
 def get_game():
-    if "game" not in session:
+    if "game_id" not in session:
+        session["game_id"] = str(uuid.uuid4())
         difficulty = session.get("difficulty", "Easy")
         rows, cols, mines = DIFFICULTIES[difficulty]
-        session["game"] = MinesweeperGame(rows, cols, mines)
-    return session["game"]
+        games[session["game_id"]] = MinesweeperGame(rows, cols, mines)
+    return games[session["game_id"]]
 
 
 # -------------------------
@@ -111,8 +132,10 @@ def start(difficulty):
         return jsonify({"error": "invalid difficulty"}), 400
 
     session["difficulty"] = difficulty
+    session["game_id"] = str(uuid.uuid4())
+
     rows, cols, mines = DIFFICULTIES[difficulty]
-    session["game"] = MinesweeperGame(rows, cols, mines)
+    games[session["game_id"]] = MinesweeperGame(rows, cols, mines)
 
     return jsonify({"status": "ok"})
 
@@ -121,14 +144,17 @@ def start(difficulty):
 def click():
     game = get_game()
     data = request.json
-    r, c = data["row"], data["col"]
+
+    r = data["row"]
+    c = data["col"]
     action = data["action"]
 
     if game.game_over_flag:
         return jsonify({
             "board_state": game.board_state,
             "remaining_mines": game.remaining_mines,
-            "game_over": True
+            "game_over": True,
+            "cleared": False
         })
 
     if action == "reveal":
@@ -136,24 +162,32 @@ def click():
     elif action == "flag":
         game.toggle_flag(r, c)
 
-    session["game"] = game
+    cleared = False
+    if not game.game_over_flag and game.is_cleared():
+        cleared = True
 
     return jsonify({
         "board_state": game.board_state,
         "remaining_mines": game.remaining_mines,
-        "game_over": game.game_over_flag
+        "game_over": game.game_over_flag,
+        "cleared": cleared
     })
 
 
 @app.route("/reset", methods=["POST"])
 def reset():
     difficulty = session.get("difficulty", "Easy")
+    session["game_id"] = str(uuid.uuid4())
+
     rows, cols, mines = DIFFICULTIES[difficulty]
-    session["game"] = MinesweeperGame(rows, cols, mines)
+    games[session["game_id"]] = MinesweeperGame(rows, cols, mines)
+
     return jsonify({"status": "ok"})
 
 
+# -------------------------
+# 起動
+# -------------------------
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

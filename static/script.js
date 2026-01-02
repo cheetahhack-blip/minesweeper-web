@@ -4,7 +4,7 @@ let revealed = [];
 let marked = [];
 let firstClick = true;
 let timer = 0;
-let timerInterval;
+let timerInterval = null;
 let remainingMines = 0;
 let currentDifficulty = "";
 
@@ -14,7 +14,9 @@ const DIFFICULTIES = {
     Hard: [16, 30, 99]
 };
 
-// --- ゲーム開始 ---
+// =======================
+// ゲーム開始
+// =======================
 function startGame(level) {
     currentDifficulty = level;
     [rows, cols, mines] = DIFFICULTIES[level];
@@ -27,9 +29,9 @@ function startGame(level) {
     timer = 0;
     remainingMines = mines;
 
+    clearInterval(timerInterval);
     document.getElementById("timer").textContent = "Time: 0 s";
     document.getElementById("remaining").textContent = `Mines: ${remainingMines}`;
-    clearInterval(timerInterval);
 
     const gameDiv = document.getElementById("game");
     gameDiv.innerHTML = "";
@@ -51,11 +53,11 @@ function startGame(level) {
             gameDiv.appendChild(cell);
         }
     }
-
-    updateBestTimes();
 }
 
-// --- 地雷配置 ---
+// =======================
+// 地雷配置
+// =======================
 function placeMines(sr, sc) {
     const forbidden = new Set();
     for (let dr = -1; dr <= 1; dr++) {
@@ -83,7 +85,11 @@ function placeMines(sr, sc) {
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     const nr = r + dr, nc = c + dc;
-                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === -1) {
+                    if (
+                        nr >= 0 && nr < rows &&
+                        nc >= 0 && nc < cols &&
+                        board[nr][nc] === -1
+                    ) {
                         count++;
                     }
                 }
@@ -93,7 +99,9 @@ function placeMines(sr, sc) {
     }
 }
 
-// --- タイマー ---
+// =======================
+// タイマー
+// =======================
 function startTimer() {
     timerInterval = setInterval(() => {
         timer++;
@@ -101,7 +109,9 @@ function startTimer() {
     }, 1000);
 }
 
-// --- セルを開く ---
+// =======================
+// セルを開く
+// =======================
 function reveal(r, c) {
     if (revealed[r][c] || marked[r][c] === 1) return;
 
@@ -119,8 +129,8 @@ function reveal(r, c) {
     if (board[r][c] === -1) {
         cell.textContent = "💣";
         clearInterval(timerInterval);
-        showDialog("GAME OVER", "どっかーん！！");
         revealAllMines();
+        showDialog("GAME OVER", "どっかーん！！");
         return;
     }
 
@@ -128,7 +138,9 @@ function reveal(r, c) {
         for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
                 const nr = r + dr, nc = c + dc;
-                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) reveal(nr, nc);
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    reveal(nr, nc);
+                }
             }
         }
     } else {
@@ -139,7 +151,9 @@ function reveal(r, c) {
     if (checkClear()) handleClear();
 }
 
-// --- 旗 ---
+// =======================
+// 旗
+// =======================
 function flag(r, c) {
     if (revealed[r][c]) return;
 
@@ -159,11 +173,15 @@ function flag(r, c) {
     document.getElementById("remaining").textContent = `Mines: ${remainingMines}`;
 }
 
-// --- クリア ---
+// =======================
+// クリア判定
+// =======================
 function checkClear() {
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-            if (board[r][c] !== -1 && !revealed[r][c]) return false;
+            if (board[r][c] !== -1 && !revealed[r][c]) {
+                return false;
+            }
         }
     }
     return true;
@@ -171,108 +189,43 @@ function checkClear() {
 
 function handleClear() {
     clearInterval(timerInterval);
-
-    db.collection("ranking")
-      .where("difficulty", "==", currentDifficulty)
-      .orderBy("time", "asc")
-      .limit(5)
-      .get()
-      .then(snapshot => {
-          const ranks = snapshot.docs.map(d => d.data());
-          const pos = ranks.findIndex(r => timer < r.time);
-
-          if (pos !== -1) {
-              const name =
-                  prompt(`やるじゃないか　${currentDifficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`)
-                  || "名無し";
-
-              submitTime(name, timer, currentDifficulty);
-
-              showDialog(
-                  "監査官の評定",
-                  `優　なかなかの手際だね\nTime: ${timer} 秒`
-              );
-          } else {
-              showDialog(
-                  "監査官の評定",
-                  `良　まだまだ、かな　Time: ${timer} 秒`
-              );
-          }
-
-          loadRanking(currentDifficulty);
-      });
+    showDialog(
+        "監査官の評定",
+        `優　なかなかの手際だね\nTime: ${timer} 秒`
+    );
 }
 
-// --- Firebase ---
-function submitTime(name, time, difficulty) {
-    return db.collection("ranking").add({
-        name, time, difficulty, date: new Date()
-    });
-}
-
-function loadRanking(difficulty) {
-    const div = document.getElementById("ranking");
-    div.innerHTML = `<h3>${difficulty} ランキング（上位5位）</h3>`;
-
-    db.collection("ranking")
-      .where("difficulty", "==", difficulty)
-      .orderBy("time", "asc")
-      .limit(5)
-      .get()
-      .then(snapshot => {
-          snapshot.docs.forEach((doc, i) => {
-              const d = doc.data();
-              div.innerHTML += `<p>${i + 1}. ${d.name}: ${d.time}秒</p>`;
-          });
-      });
-}
-
-function updateBestTimes() {
-    const ul = document.getElementById("best-list");
-    ul.innerHTML = "";
-
-    Object.keys(DIFFICULTIES).forEach(level => {
-        db.collection("ranking")
-          .where("difficulty", "==", level)
-          .orderBy("time", "asc")
-          .limit(1)
-          .get()
-          .then(snap => {
-              const li = document.createElement("li");
-              if (snap.docs[0]) {
-                  const d = snap.docs[0].data();
-                  li.textContent = `${level}: ${d.time} 秒 - ${d.name}`;
-              } else {
-                  li.textContent = `${level}: --`;
-              }
-              ul.appendChild(li);
-          });
-    });
-}
-
-// --- その他 ---
+// =======================
+// 補助
+// =======================
 function revealAllMines() {
     document.querySelectorAll(".cell").forEach(cell => {
-        const r = cell.dataset.r, c = cell.dataset.c;
-        if (board[r][c] === -1) cell.textContent = "💣";
+        const r = Number(cell.dataset.r);
+        const c = Number(cell.dataset.c);
+        if (board[r][c] === -1) {
+            cell.textContent = "💣";
+        }
     });
 }
 
 function backToMenu() {
+    clearInterval(timerInterval);
     document.getElementById("game").innerHTML = "";
     document.getElementById("timer").textContent = "Time: 0 s";
     document.getElementById("remaining").textContent = "Mines: 0";
     closeDialog();
-    updateBestTimes();
 }
 
 function getNumberColor(n) {
-    return ["blue","green","red","navy","brown","turquoise","black","gray"][n - 1] || "black";
+    return ["blue", "green", "red", "navy", "brown", "turquoise", "black", "gray"][n - 1] || "black";
 }
 
-function showDialog(t, m) {
-    document.getElementById("dialog-title").textContent = t;
-    document.getElementById("dialog-message").textContent = m;
+// =======================
+// ダイアログ
+// =======================
+function showDialog(title, message) {
+    document.getElementById("dialog-title").textContent = title;
+    document.getElementById("dialog-message").textContent = message;
     document.getElementById("custom-dialog").style.display = "flex";
 }
 
