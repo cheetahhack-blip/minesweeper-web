@@ -1,10 +1,11 @@
+// --- グローバル ---
 let rows, cols, mines;
 let board = [];
 let revealed = [];
 let marked = [];
 let firstClick = true;
 let timer = 0;
-let timerInterval = null;
+let timerInterval;
 let remainingMines = 0;
 let currentDifficulty = "";
 
@@ -14,9 +15,7 @@ const DIFFICULTIES = {
     Hard: [16, 30, 99]
 };
 
-// =======================
-// ゲーム開始
-// =======================
+// --- ゲーム開始 ---
 function startGame(level) {
     currentDifficulty = level;
     [rows, cols, mines] = DIFFICULTIES[level];
@@ -29,9 +28,9 @@ function startGame(level) {
     timer = 0;
     remainingMines = mines;
 
-    clearInterval(timerInterval);
     document.getElementById("timer").textContent = "Time: 0 s";
     document.getElementById("remaining").textContent = `Mines: ${remainingMines}`;
+    clearInterval(timerInterval);
 
     const gameDiv = document.getElementById("game");
     gameDiv.innerHTML = "";
@@ -53,11 +52,12 @@ function startGame(level) {
             gameDiv.appendChild(cell);
         }
     }
+
+    updateBestTimes();
+    loadRanking(currentDifficulty);
 }
 
-// =======================
-// 地雷配置
-// =======================
+// --- 地雷配置 ---
 function placeMines(sr, sc) {
     const forbidden = new Set();
     for (let dr = -1; dr <= 1; dr++) {
@@ -85,11 +85,7 @@ function placeMines(sr, sc) {
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     const nr = r + dr, nc = c + dc;
-                    if (
-                        nr >= 0 && nr < rows &&
-                        nc >= 0 && nc < cols &&
-                        board[nr][nc] === -1
-                    ) {
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === -1) {
                         count++;
                     }
                 }
@@ -99,9 +95,7 @@ function placeMines(sr, sc) {
     }
 }
 
-// =======================
-// タイマー
-// =======================
+// --- タイマー ---
 function startTimer() {
     timerInterval = setInterval(() => {
         timer++;
@@ -109,9 +103,7 @@ function startTimer() {
     }, 1000);
 }
 
-// =======================
-// セルを開く
-// =======================
+// --- セルを開く ---
 function reveal(r, c) {
     if (revealed[r][c] || marked[r][c] === 1) return;
 
@@ -129,8 +121,8 @@ function reveal(r, c) {
     if (board[r][c] === -1) {
         cell.textContent = "💣";
         clearInterval(timerInterval);
-        revealAllMines();
         showDialog("GAME OVER", "どっかーん！！");
+        revealAllMines();
         return;
     }
 
@@ -138,9 +130,7 @@ function reveal(r, c) {
         for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
                 const nr = r + dr, nc = c + dc;
-                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                    reveal(nr, nc);
-                }
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) reveal(nr, nc);
             }
         }
     } else {
@@ -151,9 +141,7 @@ function reveal(r, c) {
     if (checkClear()) handleClear();
 }
 
-// =======================
-// 旗
-// =======================
+// --- 旗 ---
 function flag(r, c) {
     if (revealed[r][c]) return;
 
@@ -173,22 +161,20 @@ function flag(r, c) {
     document.getElementById("remaining").textContent = `Mines: ${remainingMines}`;
 }
 
-// =======================
-// クリア判定
-// =======================
+// --- クリア判定 ---
 function checkClear() {
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-            if (board[r][c] !== -1 && !revealed[r][c]) {
-                return false;
-            }
+            if (board[r][c] !== -1 && !revealed[r][c]) return false;
         }
     }
     return true;
 }
 
+// --- クリア処理 ---
 function handleClear() {
     clearInterval(timerInterval);
+    console.log(`Cleared! Time: ${timer} sec, Difficulty: ${currentDifficulty}`);
 
     db.collection("ranking")
       .where("difficulty", "==", currentDifficulty)
@@ -197,71 +183,74 @@ function handleClear() {
       .get()
       .then(snapshot => {
           const ranks = snapshot.docs.map(d => d.data());
+          const pos = ranks.findIndex(r => timer < r.time);
 
-          // 上位5位に入るか判定
-          let pos = ranks.findIndex(r => timer < r.time);
-          if (pos === -1 && ranks.length < 5) pos = ranks.length;
+          if (pos !== -1 || ranks.length < 5) {
+              const name = prompt(`やるじゃないか　${currentDifficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`) || "名無し";
 
-          if (pos !== -1) {
-              const name =
-                  prompt(
-                      `やるじゃないか。\n${currentDifficulty} ランキング上位 ${pos + 1} 位だ。\nTime: ${timer} 秒\n名前を教えてくれるかな`
-                  ) || "名無し";
-
-              // ★ 保存 → 完了後にランキング再取得
+              console.log("Submitting:", name, timer, currentDifficulty);
               submitTime(name, timer, currentDifficulty).then(() => {
-                  showDialog(
-                      "監査官の評定",
-                      `優　なかなかの手際だね\n${currentDifficulty} ${pos + 1} 位\nTime: ${timer} 秒`
-                  );
                   loadRanking(currentDifficulty);
                   updateBestTimes();
               });
+
+              showDialog(
+                  "監査官の評定",
+                  `優　なかなかの手際だね\nTime: ${timer} 秒`
+              );
           } else {
               showDialog(
                   "監査官の評定",
-                  `良　まだまだ、かな\nTime: ${timer} 秒`
+                  `良　まだまだ、かな　Time: ${timer} 秒`
               );
+          }
+
+          if (!pos && ranks.length >= 5) {
               loadRanking(currentDifficulty);
           }
-      });
+      })
+      .catch(err => console.error("Firebase error:", err));
 }
 
-
-// =======================
-// 補助
-// =======================
-function revealAllMines() {
-    document.querySelectorAll(".cell").forEach(cell => {
-        const r = Number(cell.dataset.r);
-        const c = Number(cell.dataset.c);
-        if (board[r][c] === -1) {
-            cell.textContent = "💣";
-        }
+// --- Firebase 書き込み ---
+function submitTime(name, time, difficulty) {
+    return db.collection("ranking").add({
+        name, time, difficulty, date: new Date()
     });
 }
 
-function backToMenu() {
-    clearInterval(timerInterval);
-    document.getElementById("game").innerHTML = "";
-    document.getElementById("timer").textContent = "Time: 0 s";
-    document.getElementById("remaining").textContent = "Mines: 0";
-    closeDialog();
+// --- 上位5人表示 ---
+function loadRanking(difficulty) {
+    const div = document.getElementById("ranking");
+    div.innerHTML = `<h3>${difficulty} ランキング（上位5位）</h3>`;
+
+    db.collection("ranking")
+      .where("difficulty", "==", difficulty)
+      .orderBy("time", "asc")
+      .limit(5)
+      .get()
+      .then(snapshot => {
+          console.log("Ranking loaded:", snapshot.docs.map(d => d.data()));
+          snapshot.docs.forEach((doc, i) => {
+              const d = doc.data();
+              div.innerHTML += `<p>${i + 1}. ${d.name}: ${d.time.toFixed(2)}秒</p>`;
+          });
+      })
+      .catch(err => console.error("Firebase error:", err));
 }
 
-function getNumberColor(n) {
-    return ["blue", "green", "red", "navy", "brown", "turquoise", "black", "gray"][n - 1] || "black";
-}
+// --- Best Times 表示 ---
+function updateBestTimes() {
+    const ul = document.getElementById("best-list");
+    ul.innerHTML = "";
 
-// =======================
-// ダイアログ
-// =======================
-function showDialog(title, message) {
-    document.getElementById("dialog-title").textContent = title;
-    document.getElementById("dialog-message").textContent = message;
-    document.getElementById("custom-dialog").style.display = "flex";
-}
-
-function closeDialog() {
-    document.getElementById("custom-dialog").style.display = "none";
-}
+    Object.keys(DIFFICULTIES).forEach(level => {
+        db.collection("ranking")
+          .where("difficulty", "==", level)
+          .orderBy("time", "asc")
+          .limit(1)
+          .get()
+          .then(snap => {
+              const li = document.createElement("li");
+              if (snap.docs[0]) {
+                  const d = s
