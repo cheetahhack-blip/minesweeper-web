@@ -181,12 +181,12 @@ function handleClear() {
           const ranks = snapshot.docs.map(d => d.data());
           const pos = ranks.findIndex(r => timer < r.time);
 
-          if (position !== -1) {
+          if (pos !== -1) {
               const name =
-                  prompt(`やるじゃないか　${difficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`)
+                  prompt(`やるじゃないか　${currentDifficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`)
                   || "名無し";
 
-              submitTime(name, timer, difficulty);
+              submitTime(name, timer, currentDifficulty);
 
               showDialog(
                   "監査官の評定",
