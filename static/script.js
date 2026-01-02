@@ -181,13 +181,22 @@ function handleClear() {
           const ranks = snapshot.docs.map(d => d.data());
           const pos = ranks.findIndex(r => timer < r.time);
 
-          if (pos !== -1 || ranks.length < 5) {
-              const name = prompt(
-                  `優　なかなかやるね　${currentDifficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`
-              ) || "名無し";
-              submitTime(name, timer, currentDifficulty);
+          if (position !== -1) {
+              const name =
+                  prompt(`やるじゃないか　${difficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`)
+                  || "名無し";
+
+              submitTime(name, timer, difficulty);
+
+              showDialog(
+                  "監査官の評定",
+                  `優　なかなかの手際だね\nTime: ${timer} 秒`
+              );
           } else {
-              showDialog("監査官の評定", `良　まだまだ、かな　Time: ${timer} 秒`);
+              showDialog(
+                  "監査官の評定",
+                  `良　まだまだ、かな　Time: ${timer} 秒`
+              );
           }
 
           loadRanking(currentDifficulty);
