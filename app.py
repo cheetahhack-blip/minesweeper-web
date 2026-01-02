@@ -105,18 +105,19 @@ class MinesweeperGame:
                     return False
         return True
 
-
 # -------------------------
-# game 取得（session -> games）
+# ゲーム取得（session -> games）
 # -------------------------
 def get_game():
-    if "game_id" not in session:
-        session["game_id"] = str(uuid.uuid4())
-        difficulty = session.get("difficulty", "Easy")
+    game_id = session.get("game_id")
+    difficulty = session.get("difficulty", "Easy")
+    if not game_id or game_id not in games:
+        # 新規ゲーム作成
+        game_id = str(uuid.uuid4())
+        session["game_id"] = game_id
         rows, cols, mines = DIFFICULTIES[difficulty]
-        games[session["game_id"]] = MinesweeperGame(rows, cols, mines)
-    return games[session["game_id"]]
-
+        games[game_id] = MinesweeperGame(rows, cols, mines)
+    return games[game_id]
 
 # -------------------------
 # ルーティング
@@ -124,7 +125,6 @@ def get_game():
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 @app.route("/start/<difficulty>", methods=["POST"])
 def start(difficulty):
@@ -139,15 +139,16 @@ def start(difficulty):
 
     return jsonify({"status": "ok"})
 
-
 @app.route("/click", methods=["POST"])
 def click():
     game = get_game()
     data = request.json
+    if not data:
+        return jsonify({"error": "no data"}), 400
 
-    r = data["row"]
-    c = data["col"]
-    action = data["action"]
+    r = data.get("row")
+    c = data.get("col")
+    action = data.get("action")
 
     if game.game_over_flag:
         return jsonify({
@@ -162,9 +163,7 @@ def click():
     elif action == "flag":
         game.toggle_flag(r, c)
 
-    cleared = False
-    if not game.game_over_flag and game.is_cleared():
-        cleared = True
+    cleared = game.is_cleared() if not game.game_over_flag else False
 
     return jsonify({
         "board_state": game.board_state,
@@ -172,7 +171,6 @@ def click():
         "game_over": game.game_over_flag,
         "cleared": cleared
     })
-
 
 @app.route("/reset", methods=["POST"])
 def reset():
@@ -183,7 +181,6 @@ def reset():
     games[session["game_id"]] = MinesweeperGame(rows, cols, mines)
 
     return jsonify({"status": "ok"})
-
 
 # -------------------------
 # 起動

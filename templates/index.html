@@ -43,11 +43,11 @@
     <button onclick="backToMenu()">Back to Menu</button>
 </div>
 
-<!-- 🔽 Firebase SDK（compat版） -->
+<!-- Firebase SDK（compat版） -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<!-- 🔽 Firebase 初期化 -->
+<!-- Firebase 初期化 -->
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDinQVl3I1EKGfi9HtDxjA1xyY4XqE_pDA",
@@ -62,7 +62,7 @@
   const db = firebase.firestore();
 </script>
 
-<!-- 🔽 最後に script.js -->
+<!-- 最後に script.js を読み込む（これが重要） -->
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </body>

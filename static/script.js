@@ -174,7 +174,6 @@ function checkClear() {
 // --- クリア処理 ---
 function handleClear() {
     clearInterval(timerInterval);
-    console.log(`Cleared! Time: ${timer} sec, Difficulty: ${currentDifficulty}`);
 
     db.collection("ranking")
       .where("difficulty", "==", currentDifficulty)
@@ -188,25 +187,14 @@ function handleClear() {
           if (pos !== -1 || ranks.length < 5) {
               const name = prompt(`やるじゃないか　${currentDifficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`) || "名無し";
 
-              console.log("Submitting:", name, timer, currentDifficulty);
               submitTime(name, timer, currentDifficulty).then(() => {
                   loadRanking(currentDifficulty);
                   updateBestTimes();
               });
 
-              showDialog(
-                  "監査官の評定",
-                  `優　なかなかの手際だね\nTime: ${timer} 秒`
-              );
+              showDialog("監査官の評定", `優　なかなかの手際だね\nTime: ${timer} 秒`);
           } else {
-              showDialog(
-                  "監査官の評定",
-                  `良　まだまだ、かな　Time: ${timer} 秒`
-              );
-          }
-
-          if (!pos && ranks.length >= 5) {
-              loadRanking(currentDifficulty);
+              showDialog("監査官の評定", `良　まだまだ、かな　Time: ${timer} 秒`);
           }
       })
       .catch(err => console.error("Firebase error:", err));
@@ -230,7 +218,6 @@ function loadRanking(difficulty) {
       .limit(5)
       .get()
       .then(snapshot => {
-          console.log("Ranking loaded:", snapshot.docs.map(d => d.data()));
           snapshot.docs.forEach((doc, i) => {
               const d = doc.data();
               div.innerHTML += `<p>${i + 1}. ${d.name}: ${d.time.toFixed(2)}秒</p>`;
@@ -253,4 +240,42 @@ function updateBestTimes() {
           .then(snap => {
               const li = document.createElement("li");
               if (snap.docs[0]) {
-                  const d = s
+                  const d = snap.docs[0].data();
+                  li.textContent = `${level}: ${d.time.toFixed(2)} 秒 - ${d.name}`;
+              } else {
+                  li.textContent = `${level}: --`;
+              }
+              ul.appendChild(li);
+          });
+    });
+}
+
+// --- その他 ---
+function revealAllMines() {
+    document.querySelectorAll(".cell").forEach(cell => {
+        const r = cell.dataset.r, c = cell.dataset.c;
+        if (board[r][c] === -1) cell.textContent = "💣";
+    });
+}
+
+function backToMenu() {
+    document.getElementById("game").innerHTML = "";
+    document.getElementById("timer").textContent = "Time: 0 s";
+    document.getElementById("remaining").textContent = "Mines: 0";
+    closeDialog();
+    updateBestTimes();
+}
+
+function getNumberColor(n) {
+    return ["blue","green","red","navy","brown","turquoise","black","gray"][n - 1] || "black";
+}
+
+function showDialog(t, m) {
+    document.getElementById("dialog-title").textContent = t;
+    document.getElementById("dialog-message").textContent = m;
+    document.getElementById("custom-dialog").style.display = "flex";
+}
+
+function closeDialog() {
+    document.getElementById("custom-dialog").style.display = "none";
+}
