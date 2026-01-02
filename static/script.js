@@ -121,7 +121,7 @@ function reveal(r, c) {
     if (board[r][c] === -1) {
         cell.textContent = "💣";
         clearInterval(timerInterval);
-        showDialog("GAME OVER", "どっかーん！！");
+        showDialog("地雷を踏んだ", "どっかーん！！");
         revealAllMines();
         return;
     }
