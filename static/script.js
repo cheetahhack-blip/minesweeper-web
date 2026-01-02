@@ -187,10 +187,15 @@ function handleClear() {
           if (pos !== -1 || ranks.length < 5) {
               const name = prompt(`やるじゃないか　${currentDifficulty}のランキング上位だ\nTime: ${timer} 秒\n名前を教えてくれるかな`) || "名無し";
 
-              submitTime(name, timer, currentDifficulty).then(() => {
-                  loadRanking(currentDifficulty);
-                  updateBestTimes();
-              });
+              submitTime(name, timer, currentDifficulty)
+                .then(() => {
+                    loadRanking(currentDifficulty);
+                    updateBestTimes();
+                })
+                .catch(err => {
+                    console.error("submitTime failed:", err);
+                    showDialog("監査官", "通信状態が不安定みたいだ。もう一度だけ試してくれるか。");
+                });
 
               showDialog("監査官の評定", `優　なかなかの手際だね\nTime: ${timer} 秒`);
           } else {
@@ -202,9 +207,20 @@ function handleClear() {
 
 // --- Firebase 書き込み ---
 function submitTime(name, time, difficulty) {
-    return db.collection("ranking").add({
-        name, time, difficulty, date: new Date()
-    });
+  const user = firebase.auth().currentUser;
+
+  // 匿名ログインがまだ完了していない場合は送信しない
+  if (!user) {
+    return Promise.reject(new Error("Auth not ready"));
+  }
+
+  return db.collection("ranking").add({
+    name,
+    time: Number(time),
+    difficulty,
+    uid: user.uid,
+    date: new Date()
+  });
 }
 
 // --- 上位5人表示 ---

@@ -46,6 +46,7 @@
 <!-- Firebase SDK（compat版） -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <!-- Firebase 初期化 -->
 <script>
@@ -60,6 +61,10 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+
+   // 追加：匿名ログイン
+  firebase.auth().signInAnonymously()
+    .catch(err => console.error("Auth error:", err));
 </script>
 
 <!-- 最後に script.js を読み込む（これが重要） -->
