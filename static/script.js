@@ -198,37 +198,35 @@ function handleClear() {
       .then(snapshot => {
           const ranks = snapshot.docs.map(d => d.data());
 
-          let canRankIn = false;
+          // 上位5位に入るか判定
+          let pos = ranks.findIndex(r => timer < r.time);
+          if (pos === -1 && ranks.length < 5) pos = ranks.length;
 
-          if (ranks.length < 5) {
-              canRankIn = true;
-          } else if (timer < ranks[ranks.length - 1].time) {
-              canRankIn = true;
-          }
-
-          if (canRankIn) {
+          if (pos !== -1) {
               const name =
                   prompt(
-                      `やるじゃないか\n` +
-                      `${currentDifficulty} ランキング上位だ\n` +
-                      `Time: ${timer} 秒\n\n名前を教えてくれるかな`
+                      `やるじゃないか。\n${currentDifficulty} ランキング上位 ${pos + 1} 位だ。\nTime: ${timer} 秒\n名前を教えてくれるかな`
                   ) || "名無し";
 
-              submitTime(name, timer, currentDifficulty)
-                  .then(() => loadRanking(currentDifficulty));
-
-              showDialog(
-                  "監査官の評定",
-                  `優　なかなかの手際だね\nTime: ${timer} 秒`
-              );
+              // ★ 保存 → 完了後にランキング再取得
+              submitTime(name, timer, currentDifficulty).then(() => {
+                  showDialog(
+                      "監査官の評定",
+                      `優　なかなかの手際だね\n${currentDifficulty} ${pos + 1} 位\nTime: ${timer} 秒`
+                  );
+                  loadRanking(currentDifficulty);
+                  updateBestTimes();
+              });
           } else {
               showDialog(
                   "監査官の評定",
                   `良　まだまだ、かな\nTime: ${timer} 秒`
               );
+              loadRanking(currentDifficulty);
           }
       });
 }
+
 
 // =======================
 // 補助
