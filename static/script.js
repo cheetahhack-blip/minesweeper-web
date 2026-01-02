@@ -189,10 +189,45 @@ function checkClear() {
 
 function handleClear() {
     clearInterval(timerInterval);
-    showDialog(
-        "監査官の評定",
-        `優　なかなかの手際だね\nTime: ${timer} 秒`
-    );
+
+    db.collection("ranking")
+      .where("difficulty", "==", currentDifficulty)
+      .orderBy("time", "asc")
+      .limit(5)
+      .get()
+      .then(snapshot => {
+          const ranks = snapshot.docs.map(d => d.data());
+
+          let canRankIn = false;
+
+          if (ranks.length < 5) {
+              canRankIn = true;
+          } else if (timer < ranks[ranks.length - 1].time) {
+              canRankIn = true;
+          }
+
+          if (canRankIn) {
+              const name =
+                  prompt(
+                      `やるじゃないか\n` +
+                      `${currentDifficulty} ランキング上位だ\n` +
+                      `Time: ${timer} 秒\n\n名前を教えてくれるかな`
+                  ) || "名無し";
+
+              submitTime(name, timer, currentDifficulty)
+                  .then(() => loadRanking(currentDifficulty));
+
+              showDialog(
+                  "監査官の評定",
+                  `優　なかなかの手際だね\nTime: ${timer} 秒`
+              );
+          } else {
+              showDialog(
+                  "監査官の評定",
+                  `良　まだまだ、かな\nTime: ${timer} 秒`
+              );
+          }
+      });
 }
 
 // =======================
